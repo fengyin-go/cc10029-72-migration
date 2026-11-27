@@ -1,6 +1,14 @@
 import { request } from './client'
 import { moduleMeta } from '@/data/modules'
-import type { ActionResult, EntryRow, OverviewResult, PageResult } from '@/data/types'
+import type {
+  ActionResult,
+  EntryRow,
+  EntrySource,
+  OverviewResult,
+  PageResult,
+  Receipt,
+  TodoItem,
+} from '@/data/types'
 
 export { moduleMeta }
 
@@ -29,11 +37,36 @@ export async function runAction(
   key: string,
   id: number,
   action: string,
+  actionId?: string,
 ): Promise<ActionResult> {
+  // 新客户端把展示名和稳定编号一起发；旧服务只认 action，新服务优先认 action_id。
+  const body: Record<string, string> = { action }
+  if (actionId) body.action_id = actionId
   const response = await request(`/api/${key}/${id}/actions`, {
     method: 'POST',
-    body: JSON.stringify({ action }),
+    body: JSON.stringify(body),
   })
+  return await response.json()
+}
+
+export async function loadTodos(): Promise<TodoItem[]> {
+  const response = await request('/api/todos')
+  if (!response.ok) throw new Error('待办读取失败')
+  return await response.json()
+}
+
+export async function loadReceipts(key: string, id: number): Promise<Receipt[]> {
+  const response = await request(`/api/${key}/${id}/receipts`)
+  if (!response.ok) throw new Error('受理回执读取失败')
+  return await response.json()
+}
+
+export async function loadSource(
+  key: string,
+  id: number,
+): Promise<{ entry_id: number; source: EntrySource | null }> {
+  const response = await request(`/api/${key}/${id}/source`)
+  if (!response.ok) throw new Error('来源读取失败')
   return await response.json()
 }
 

@@ -17,7 +17,7 @@ class TeachRecordService(BaseModuleService):
     ACTION_RULES = {"审核归档": "已归档", "退回补正": "草稿", "注销档案": "已注销"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含业务约束与跨模块关联。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -38,4 +38,4 @@ class TeachRecordService(BaseModuleService):
             if entry.get("status") in ("已归档", "已注销"):
                 return None, f"{self.ENTITY} {entry_id} 已经{entry.get('status')}，不可退回补正"
 
-        return super().run_action(entry_id, action)
+        return super()._execute_action(entry_id, action)

@@ -35,7 +35,7 @@ class SemesterGoalService(BaseModuleService):
 
         return super().create_entry(values)
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含冲突检测。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -64,4 +64,4 @@ class SemesterGoalService(BaseModuleService):
             if entry.get("status") != "已审定":
                 return None, f"{self.ENTITY} {entry_id} 必须先审定，才能废止"
 
-        return super().run_action(entry_id, action)
+        return super()._execute_action(entry_id, action)

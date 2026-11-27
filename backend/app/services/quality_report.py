@@ -17,7 +17,7 @@ class QualityReportService(BaseModuleService):
     ACTION_RULES = {"签收简报": "已签收", "补充说明": "草稿", "传达到教师": "已传达"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含跨模块联动：签收时检查突出问题触发复盘会议。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -33,7 +33,7 @@ class QualityReportService(BaseModuleService):
             if entry.get("status") != "已签收":
                 return None, f"{self.ENTITY} {entry_id} 必须先签收简报，才能传达"
 
-        result_entry, message = super().run_action(entry_id, action)
+        result_entry, message = super()._execute_action(entry_id, action)
 
         # 签收简报后，如果突出问题中存在严重问题，触发复盘会议
         if result_entry and action == "签收简报":

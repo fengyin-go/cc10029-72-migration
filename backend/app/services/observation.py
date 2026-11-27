@@ -16,7 +16,7 @@ class ObservationService(BaseModuleService):
     ACTION_RULES = {"提交记录": "已提交", "退回修改": "草稿", "归档记录": "已归档"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含状态联动约束。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -34,4 +34,4 @@ class ObservationService(BaseModuleService):
             if entry.get("status") in ("已提交", "已归档"):
                 return None, f"{self.ENTITY} {entry_id} 已经{entry.get('status')}，不可退回修改"
 
-        return super().run_action(entry_id, action)
+        return super()._execute_action(entry_id, action)

@@ -17,7 +17,7 @@ class SyllabusRevService(BaseModuleService):
     ACTION_RULES = {"审批修订": "已通过", "提交审批": "待审批", "否决修订": "已否决"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含跨模块联动：审批通过后更新相关集体备课记录。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -33,7 +33,7 @@ class SyllabusRevService(BaseModuleService):
             if entry.get("status") not in ("待审批", "草稿"):
                 return None, f"{self.ENTITY} {entry_id} 当前状态为'{entry.get('status')}'，不可否决"
 
-        result_entry, message = super().run_action(entry_id, action)
+        result_entry, message = super()._execute_action(entry_id, action)
 
         # 审批通过后，标记相关集体备课记录为待签阅
         if result_entry and action == "审批修订":

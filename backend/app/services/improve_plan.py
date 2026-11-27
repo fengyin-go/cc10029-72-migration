@@ -40,7 +40,7 @@ class ImprovePlanService(BaseModuleService):
 
         return super().create_entry(values)
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含业务约束。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -61,4 +61,4 @@ class ImprovePlanService(BaseModuleService):
             if entry.get("status") not in ("待审核", "草稿"):
                 return None, f"{self.ENTITY} {entry_id} 当前状态为'{entry.get('status')}'，不可驳回"
 
-        return super().run_action(entry_id, action)
+        return super()._execute_action(entry_id, action)

@@ -79,5 +79,44 @@ npm run dev
 - 列表接口统一返回 `{ items, total, page, size }`，动作接口统一返回 `{ ok, message }`。
 - 状态流转只允许在 `app/services` 里改，路由层不做业务判断。
 
+## 动作契约与受理回执
+
+界面按钮上的文字只是展示名，动作真正依赖的是稳定编号（如
+`review_meeting.dispatch`）。改名不改契约：新版把“分发”显示为“下达”，
+旧工作台继续发送原词“分发给教师”，服务端都归一化到同一个动作。
+
+- `backend/app/action_contract.py`：每个动作的 `action_id`、当前展示名、
+  旧原词和模块内序号；`GET /api/actions/catalog` 对外给出对照表。
+- 动作请求体可以是旧格式 `{ "action": "分发给教师" }`，也可以是新格式
+  `{ "action": "分发给教师", "action_id": "review_meeting.dispatch" }`。
+  新前端同时发送原词和编号，旧后端、新后端都能处理，可并行上线。
+- 动作响应保持原来的 `ok / message / entry`，另加 `action_id`、`action_label`
+  和 `receipt`；旧客户端忽略新增字段即可。
+- 会派生业务对象的动作（如纪要“下达”）带受理回执：同一
+  (模块, 对象编号, 动作编号) 只受理一次，重复请求（旧页面迟到的回执、
+  另一个标签页的新请求）读回第一份回执和同一个派生对象。
+  `GET /api/{module}/{id}/receipts`、`GET /api/receipts/{receipt_id}` 可查。
+- 派生对象（诊改事项、同行评议邀请）同时写入结构化来源字段
+  （`来源类型`/`来源编号`/`来源标签`）和旧格式文本标记（`[meeting:62]`、
+  `[lesson_prep:52]`），旧服务回切后仍能按原样去重和读取。
+  `GET /api/{module}/{id}/source` 可从派生对象回到原会议/原备课。
+- `GET /api/todos` 汇总教师待办，每条都带原业务对象和已有回执，
+  新旧页面都能从待办回到发起页。
+
+## 验收演练
+
+示例数据带两条演练记录：纪要 `M-62`（已签认）与备课 `L-52`（待签阅）。
+
+```bash
+# 旧页面按原词分发；另一个标签页用新编号下达同一份纪要
+curl -s -X POST localhost:8000/api/review_meeting/62/actions \
+  -H 'Content-Type: application/json' -d '{"action":"分发给教师"}'
+curl -s -X POST localhost:8000/api/review_meeting/62/actions \
+  -H 'Content-Type: application/json' \
+  -d '{"action":"分发给教师","action_id":"review_meeting.dispatch"}'
+# 两次拿到的 receipt_id 相同，诊改事项只有一项
+curl -s localhost:8000/api/review_meeting/62/receipts
+```
+
 领域：应用开发
 子方向：web前端/全栈开发

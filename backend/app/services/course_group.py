@@ -16,7 +16,7 @@ class CourseGroupService(BaseModuleService):
     ACTION_RULES = {"确认建组": "已建组", "调整成员": "已建组", "解散课程组": "已解散"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -29,4 +29,4 @@ class CourseGroupService(BaseModuleService):
             if entry.get("status") not in ("已建组", "草稿", "待确认"):
                 return None, f"{self.ENTITY} {entry_id} 当前状态为'{entry.get('status')}'，不可解散"
 
-        return super().run_action(entry_id, action)
+        return super()._execute_action(entry_id, action)

@@ -17,7 +17,7 @@ class ExamAnalysisService(BaseModuleService):
     ACTION_RULES = {"审核分析": "审核通过", "退回重填": "草稿", "存档分析": "已存档"}
     NEGATIVE_ACTIONS = []
 
-    def run_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
+    def _execute_action(self, entry_id: int, action: str) -> tuple[dict[str, Any] | None, str]:
         """执行动作，含跨模块联动：审核通过时检查是否需要触发改进方案。"""
         entry = self.get_entry(entry_id)
         if entry is None:
@@ -28,7 +28,7 @@ class ExamAnalysisService(BaseModuleService):
             if entry.get("status") not in ("待审核", "草稿"):
                 return None, f"{self.ENTITY} {entry_id} 当前状态为'{entry.get('status')}'，不可审核"
 
-        result_entry, message = super().run_action(entry_id, action)
+        result_entry, message = super()._execute_action(entry_id, action)
 
         # 审核通过后发现薄弱点，触发改进方案
         if result_entry and action == "审核分析":

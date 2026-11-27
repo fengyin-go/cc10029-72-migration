@@ -6,6 +6,7 @@
         <p class="page-desc">{{ meta.desc }}</p>
       </div>
       <div class="page-actions">
+        <RouterLink class="btn" data-testid="open-todos" to="/todos">教师待办</RouterLink>
         <button class="btn primary" data-testid="open-create" type="button" @click="openCreate">
           登记{{ meta.entity }}
         </button>
@@ -51,14 +52,15 @@
           <td>{{ row.status }}</td>
           <td class="row-actions">
             <button
-              v-for="action in meta.actions"
-              :key="action"
+              v-for="action in actionItems"
+              :key="action.action_id"
               class="link"
               type="button"
-              :data-testid="`action-${row.id}-${action}`"
-              @click="runAction(action, row)"
+              :data-testid="`action-${row.id}-${action.label}`"
+              :data-action-id="action.action_id"
+              @click="runAction(action.label, row, action.action_id)"
             >
-              {{ action }}
+              {{ action.label }}
             </button>
           </td>
         </tr>
@@ -103,6 +105,7 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/backend-service'
+import { actionLabels, actionSpec, legacyLabel, loadActionCatalog } from '@/api/actions'
 import type { EntryRow } from '@/data/types'
 
 const props = defineProps<{ moduleKey: string }>()
@@ -115,6 +118,14 @@ const filterFields = meta.fields.slice(0, 3)
 const showCreate = ref(false)
 const creating = ref(false)
 const createValues = ref<Record<string, string>>({})
+/** 按钮展示名和稳定编号：契约加载后“分发”会显示为“下达”。 */
+const actionItems = computed(() => {
+  const specList = actionLabels(meta.key, meta.actions)
+  return specList.map((label) => {
+    const spec = actionSpec(meta.key, label)
+    return { label, action_id: spec?.action_id ?? label }
+  })
+})
 const stats = computed(() => [
   { label: meta.metrics[0], value: total.value },
   { label: meta.metrics[1], value: rows.value.filter((row) => row.status === meta.statuses[1]).length },
@@ -165,11 +176,22 @@ async function submitCreate() {
   }
 }
 
-async function runAction(action: string, row: EntryRow) {
+async function runAction(action: string, row: EntryRow, actionId?: string) {
   errorMessage.value = ''
   try {
-    const result = await applyAction(meta.key, Number(row.id), action)
+    // 并行部署时后端可能还是旧版：action 始终带旧服务认识的原词，
+    // 新版服务优先按 action_id 归一化，两边落到同一个动作。
+    const result = await applyAction(
+      meta.key,
+      Number(row.id),
+      legacyLabel(meta.key, action),
+      actionId,
+    )
     if (!result.ok) throw new Error(result.message)
+    // 受理回执可能沿用首次结果（例如另一个标签页已下达），页脚回显实际回执。
+    if (result.receipt?.replayed) {
+      errorMessage.value = `${result.message}（沿用首次受理 ${result.receipt.receipt_id}）`
+    }
     await reload()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '操作失败'
@@ -187,5 +209,8 @@ async function reload() {
   }
 }
 
-onMounted(reload)
+onMounted(async () => {
+  await loadActionCatalog()
+  void reload()
+})
 </script>
